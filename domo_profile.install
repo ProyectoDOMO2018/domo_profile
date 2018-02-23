@@ -1,0 +1,134 @@
+<?php
+/**
+ * @file
+ * Install, update and uninstall functions for the domo_profile installation profile.
+ */
+
+
+/**
+ * Implements hook_install().
+ *
+ * Perform actions to set up the site for this profile.
+ *
+ * @see system_install()
+ */
+function domo_profile_install() {
+
+  // Create a default role for site administrators, with all available permissions assigned.
+  $admin_role = new stdClass();
+  $admin_role->name = 'administrator';
+  $admin_role->weight = 2;
+  user_role_save($admin_role);
+  user_role_grant_permissions($admin_role->rid, array_keys(module_invoke_all('permission')));
+  // Set this as the administrator role.
+  variable_set('user_admin_role', $admin_role->rid);
+  // Assign user 1 the "administrator" role.
+  db_insert('users_roles')
+    ->fields(array('uid' => 1, 'rid' => $admin_role->rid))
+    ->execute();
+  // Enable the admin theme.
+  db_update('system')
+    ->fields(array('status' => 1))
+    ->condition('type', 'theme')
+    ->condition('name', 'seven')
+    ->execute();
+  // Assign permission 'use PHP for settings' to admin role
+  db_insert('role_permission')
+    ->fields(array('rid' => $admin_role->rid, 'permission' => 'use PHP for settings', 'module' => 'system'))
+    ->execute();
+  // Disable the default Bartik theme
+  //theme_disable(array('bartik'));
+
+  // Any themes without keys here will get numeric keys and so will be enabled,
+  // but not placed into variables.
+  $enable = array(
+    'theme_default' => 'bartik',
+    'admin_theme' => 'seven',
+  );
+  theme_enable($enable);  
+  $enable += array(
+    'date_default_timezone' => ' America/Guayaquil',
+    'filter_fallback_format' => 'plain_text',
+    'site_default_country' => 'EC',
+    'site_name' => 'domo',
+    'configuration_config_path' => 'profiles/domo_profile/config'
+  );
+
+  foreach ($enable as $var => $value) {
+    if (!is_numeric($var)) {
+      variable_set($var, $value);
+    }
+  }
+
+  // Insert default pre-defined node types into the database. For a complete
+  // list of available node type attributes, refer to the node type API
+  // documentation at: http://api.drupal.org/api/HEAD/function/hook_node_info.
+  $types = array(
+    array(
+      'type' => 'page',
+      'name' => st('Basic page'),
+      'base' => 'node_content',
+      'description' => st("Use <em>basic pages</em> for your static content, such as an 'About us' page."),
+      'custom' => 1,
+      'modified' => 1,
+      'locked' => 0,
+    ),
+  );
+
+  foreach ($types as $type) {
+    $type = node_type_set_defaults($type);
+    node_type_save($type);
+    node_add_body_field($type);
+  }
+}
+
+/**
+ * Implements hook_install_tasks().
+ */
+function domo_profile_install_tasks(&$install_state) {
+
+  $tasks = array();
+  $tasks['additional_roles'] = array(
+    'display_name' => st('Add roles'),
+    'display' => TRUE,
+    'type' => 'batch',
+    'run' => INSTALL_TASK_RUN_IF_REACHED,
+    'function' => 'create_additional_roles',
+  );  
+  return $tasks;
+}
+
+/**
+ * Callback function for the 'additional_roles' task.
+ */
+function create_additional_roles(&$context) {
+
+  $batch = array(
+    'title' => st('Creating additional roles'),
+  );
+  // Add new roles here, the key array becomes the weight when the function
+  // '_custom_add_role' is called.
+  $roles_to_be_added = array();
+  $roles_to_be_added[3] = 'Editor';
+  $roles_to_be_added[4] = 'Diseno';
+  foreach ($roles_to_be_added as $role_weight => $role_name) {
+    $batch['operations'][] = array('_custom_add_role', array($role_name, $role_weight));
+  }
+  return $batch;
+}
+
+/**
+ * Wrapper for the creation of individual roles.
+ */
+function _custom_add_role($name, $weight, &$context) {
+
+  $role = new stdClass();
+  $role->name = $name;
+  $role->weight = $weight;
+  $success = user_role_save($role);
+  if (!$success) {
+      throw new Exception("Role $name could not be created.");
+  }
+  user_role_grant_permissions($role->rid, array_keys(module_invoke_all('permission')));
+  return $success;
+}

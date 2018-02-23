@@ -1,0 +1,12 @@
+# Ignore configuration files that may contain sensitive information.
+sites/*/settings*.php
+
+# Ignore Netbeans stuff
+nbproject/
+
+# Ignore paths that contain user-generated content.
+sites/*/files
+sites/*/private
+probe.php
+sites/sftp-config.json
+sftp-config.json

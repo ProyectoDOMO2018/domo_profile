@@ -1,0 +1,24 @@
+name = DOMO Profile
+description = Profile for the DOMO site
+core = 7.x
+files[] = domo_profile.profile
+files[] = domo_profile.install
+
+; Core
+dependencies[] = block
+dependencies[] = contextual
+dependencies[] = dashboard
+dependencies[] = help
+dependencies[] = image
+dependencies[] = list
+dependencies[] = menu
+dependencies[] = number
+dependencies[] = options
+dependencies[] = path
+dependencies[] = taxonomy
+dependencies[] = dblog
+dependencies[] = search
+dependencies[] = field_ui
+dependencies[] = file
+
+; Contrib
